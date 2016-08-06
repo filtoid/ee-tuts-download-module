@@ -58,8 +58,8 @@ class Download_mcp {
 		$this->EE->load->library('javascript');
 		$this->EE->load->library('table');
 		$this->EE->load->helper('form');
-		
-		$this->EE->cp->set_variable('cp_page_title', $this->EE->lang->line('download_module_name'));
+
+		$this->EE->view->cp_page_title =  lang('download_module_name');		
 
 		$vars['action_url'] = 'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=download'.AMP.'method=edit_downloads';
 		$vars['form_hidden'] = NULL;
