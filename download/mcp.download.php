@@ -516,116 +516,102 @@ class Download_mcp {
 	 */
 	function _map($dir_id = FALSE)
 	{
-		$upload_directories = $this->EE->tools_model->get_upload_preferences($this->EE->session->userdata('member_group'));
-		$existing_files = FALSE;
-
-		// if a user has no directories available to them, then they have no right to be here
-		if ($this->EE->session->userdata['group_id'] != 1 && $upload_directories->num_rows() == 0)
-		{
-			show_error($this->EE->lang->line('unauthorized_access'));
-		}
-
-		$vars['file_list'] = array(); // will hold the list of directories and files
-		$vars['upload_directories'] = array();
-
-
-		if ($dir_id)
-		{
-			$this->EE->db->where('dir_id', $dir_id); 
-		}
-
-		$query = $this->EE->db->get('download_files');
-		
-		if ($query->num_rows() > 0)
-		{		
-			foreach ($query->result() as $row)
-			{
-				$existing_files[$row->dir_id.'_'.$row->file_name] = '';
-			}
-		}
-
-		$this->EE->load->helper('directory');
-
-		foreach ($upload_directories->result() as $dir)
-		{
-			if ($dir_id && $dir->id != $dir_id)
-			{
-				continue;
-			}
-			
-			// we need to know the dirs for the purposes of uploads, so grab them here
-			$vars['upload_directories'][$dir->id] = $dir->name;
-
-			$vars['file_list'][$dir->id]['id'] = $dir->id;
-			$vars['file_list'][$dir->id]['name'] = $dir->name;
-			$vars['file_list'][$dir->id]['url'] = $dir->url;
-			$vars['file_list'][$dir->id]['display'] = ($this->EE->input->cookie('hide_upload_dir_id_'.$dir->id) == 'true') ? 'none' : 'block';
-			$files = $this->EE->tools_model->get_files($dir->server_path, $dir->allowed_types);
-
-			$file_count = 0;
-			$vars['file_list'][$dir->id]['files'] = array(); // initialize so empty dirs don't throw errors
-
-			// construct table row arrays
-			foreach($files as $file)
-			{
-				if ($file['name'] == '_thumbs' OR $file['name'] == 'folder')
-				{
-					continue;
-				}
-
-				if (isset($existing_files[$dir->id.'_'.$file['name']]))
-				{
-					continue;
-				}
-
-				if (strncmp($file['mime'], 'image', 5) == 0)
-				{
-					$vars['file_list'][$dir->id]['files'][$file_count] = array(
-						array(
-							'class'=>'fancybox', 
-							'data' => '<a class="fancybox" id="img_'.str_replace(".", '', $file['name']).'" href="'.$dir->url.$file['name'].'" title="'.$file['name'].NBS.'" rel="'.$file['encrypted_path'].'">'.$file['name'].'</a>',
-						),
-						array(
-							'class'=>'fancybox align_right', 
-							'data' => number_format($file['size']/1000, 1).NBS.lang('file_size_unit'),
-						),
-						array(
-							'class'=>'fancybox', 
-							'data' => $file['mime'],
-						),
-						array(
-							'class'=>'fancybox', 
-							'data' => date('M d Y - H:ia', $file['date'])
-						),
-						array(
-							'class' => 'file_select', 
-							'data' => form_checkbox('file[]', $dir->id.'_'.$file['name'], FALSE, 'class="toggle"')
-						)
-					);
-				}
-				else
-				{
-					$vars['file_list'][$dir->id]['files'][$file_count] = array(
-						$file['name'],
-						array(
-							'class'=>'align_right', 
-							'data' => number_format($file['size']/1000, 1).NBS.lang('file_size_unit'),
-						),
-						$file['mime'],
-						date('M d Y - H:ia', $file['date']),
-						array(
-							'class' => 'file_select', 
-							'data' => form_checkbox('file[]', $dir->id.'_'.$file['name'], FALSE, 'class="toggle"')
-						)
-					);
-				}
-
-				$file_count++;
-			}
-
-		}
-
-		return $vars;
+      		$this->EE->load->model('File_upload_preferences_model');
+    		$upload_directories = $this->EE->File_upload_preferences_model->get_file_upload_preferences($this->EE->session->userdata('member_group'));
+	        $existing_files = FALSE;
+	        $upload_directories = array();
+	        // if a user has no directories available to them, then they have no right to be here
+	        if ($this->EE->session->userdata['group_id'] != 1 && $upload_directories->num_rows() == 0)
+	        {
+	            show_error($this->EE->lang->line('unauthorized_access'));
+	        }
+	        $vars['file_list'] = array(); // will hold the list of directories and files
+	        $vars['upload_directories'] = array();
+	        if ($dir_id)
+	        {
+	            $this->EE->db->where('dir_id', $dir_id);
+	        }
+	        $query = $this->EE->db->get('download_files');
+	        if ($query->num_rows() > 0)
+	        {
+	            foreach ($query->result() as $row)
+	            {
+	                $existing_files[$row->dir_id.'_'.$row->file_name] = '';
+	            }
+	        }
+	        $this->EE->load->helper('directory');
+	        foreach ($upload_directories as $dir)
+	        {
+	            	if ($dir_id && $dir->id != $dir_id)
+	            	{
+	                	continue;
+	            	}
+	            	// we need to know the dirs for the purposes of uploads, so grab them here
+	             	$vars['upload_directories'][$dir['id']] = $dir['name'];
+	            	$vars['file_list'][$dir['id']]['id'] = $dir['id'];
+	            	$vars['file_list'][$dir['id']]['name'] = $dir['name'];
+	            	$vars['file_list'][$dir['id']]['url'] = $dir['url'];
+	            	$vars['file_list'][$dir['id']]['display'] = ($this->EE->input->cookie('hide_upload_dir_id_'.$dir['id']) == 'true') ? 'none' : 'block';
+	            	$this->EE->load->model('file_model');
+	            	$files = $this->EE->file_model->get_raw_files($dir['server_path'], $dir['allowed_types']);
+	            	$file_count = 0;
+	            	$vars['file_list'][$dir['id']]['files'] = array(); // initialize so empty dirs don't throw errors
+	            	// construct table row arrays
+	            	foreach($files as $file)
+	            	{
+	                	if ($file['name'] == '_thumbs' OR $file['name'] == 'folder')
+	                	{
+	                    		continue;
+		                }
+		                if (isset($existing_files[$dir['id'].'_'.$file['name']]))
+		                {
+		                    continue;
+		                }
+	                	if (strncmp($file['mime'], 'image', 5) == 0)
+	                	{
+	                    		$vars['file_list'][$dir['id']]['files'][$file_count] = array(
+			                        array(
+			                            'class'=>'fancybox',
+			                            'data' => '<a class="fancybox" id="img_'.str_replace(".", '', $file['name']).'" href="'.$dir['url'].$file['name'].'" title="'.$file['name'].NBS.'" rel="'.$file['encrypted_path'].'">'.$file['name'].'</a>',
+			                        ),
+			                        array(
+			                            'class'=>'fancybox align_right',
+			                            'data' => number_format($file['size']/1000, 1).NBS.lang('file_size_unit'),
+			                        ),
+			                        array(
+			                            'class'=>'fancybox',
+			                            'data' => $file['mime'],
+	                        		),
+			                        array(
+			                            'class'=>'fancybox',
+			                            'data' => date('M d Y - H:ia', $file['date'])
+	                        		),
+	                        		array(
+	                            			'class' => 'file_select',
+	                            			'data' => form_checkbox('file[]', $dir['id'].'_'.$file['name'], FALSE, 'class="toggle"')
+	                        		)
+	                    		);
+	                	}
+	                	else
+	                	{
+	                    		$vars['file_list'][$dir['id']]['files'][$file_count] = array(
+			                        $file['name'],
+			                        array(
+			                            'class'=>'align_right',
+			                            'data' => number_format($file['size']/1000, 1).NBS.lang('file_size_unit'),
+			                        ),
+			                        $file['mime'],
+			                        date('M d Y - H:ia', $file['date']),
+			                        array(
+			                            'class' => 'file_select',
+			                            'data' => form_checkbox('file[]', $dir['id'].'_'.$file['name'], FALSE, 'class="toggle"')
+			                        )
+	                    		);
+	                		}
+	                		$file_count++;
+	            		}
+	          	}
+        	return $vars;
 	}
 
 	
